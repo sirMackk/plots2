@@ -391,7 +391,7 @@ class DrupalNode < ActiveRecord::Base
   end
 
   def self.find_map_by_slug(title)
-    name = title.split('/')[0].gsub('-', '')
+    name = title.split('/')[0].gsub('-', ' ')
     date = Date.strptime(title.split('/')[1], '%m-%d-%Y')
     date_range = (date.beginning_of_day.to_time.to_i..date.end_of_day.to_time.to_i)
     DrupalNode.where(title: name, created: date_range).first
