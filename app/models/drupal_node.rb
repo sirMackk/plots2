@@ -104,7 +104,8 @@ class DrupalNode < ActiveRecord::Base
 
   def current_revision
     # Grab the most recent revision for this node.
-    DrupalNodeRevision.where(nid: nid).order("timestamp DESC").limit(1)[0]
+    self.drupal_node_revision#.order(timestamp: "DESC").last
+    #DrupalNodeRevision.where(nid: nid).order("timestamp DESC").limit(1)[0]
   end
 
   def current_title
@@ -148,23 +149,30 @@ class DrupalNode < ActiveRecord::Base
   # Manual associations: 
 
   def latest
-    DrupalNodeRevision.find_by_nid(self.nid,:order => "timestamp DESC")
+    self.drupal_node_revision.last
+    #self.drupal_node_revision.order(timestamp: "DESC").last
+    #DrupalNodeRevision.find_by_nid(self.nid,:order => "timestamp DESC")
   end
 
   def revisions
-    DrupalNodeRevision.find_all_by_nid(self.nid,:order => "timestamp DESC")
+    self.drupal_node_revision
+    #self.drupal_node_revision.order(timestamp: "DESC")
+    #DrupalNodeRevision.find_all_by_nid(self.nid,:order => "timestamp DESC")
   end
 
   def revision_count
-    DrupalNodeRevision.count_by_nid(self.nid)
+    self.drupal_node_revision.size
+    #DrupalNodeRevision.count_by_nid(self.nid)
   end
 
   def comment_count
-    DrupalComment.count :all, :conditions => {:nid => self.nid}
+    self.drupal_comments.size
+    #DrupalComment.count :all, :conditions => {:nid => self.nid}
   end
 
   def comments
-    DrupalComment.find_all_by_nid self.nid, :order => "timestamp", :conditions => {:status => 0}
+    self.drupal_comments.order(timestamp: :desc)
+    #DrupalComment.find_all_by_nid self.nid, :order => "timestamp", :conditions => {:status => 0}
   end
 
   def author
@@ -202,10 +210,11 @@ class DrupalNode < ActiveRecord::Base
 
   # provide either a Drupally main_iamge or a Railsy one 
   def main_image(node_type = :all)
+    return nil if self.images.empty?
     if (self.type == "place" || self.type == "tool") && self.images.length == 0 # special handling... oddly needed:
       DrupalMainImage.find(:last, :conditions => {:nid => self.id}, :order => "field_main_image_fid").drupal_file
     else
-      if self.images && self.images.length > 0 && node_type != :drupal
+      if self.images.length > 0 && node_type != :drupal
         self.images.last 
       elsif self.drupal_main_image && node_type != :rails
         self.drupal_main_image.drupal_file 
@@ -335,7 +344,8 @@ class DrupalNode < ActiveRecord::Base
     if self.type == "page" || self.type == "tool" || self.type == "place"
       slug = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC").dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
     else
-      slug = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC").dst if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
+      slug = "#{self.type}/#{self.title.gsub(" ", "-")}/#{Time.at(created_at).to_date}"
+      #slug = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC").dst if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
     end
     slug
   end
@@ -381,12 +391,18 @@ class DrupalNode < ActiveRecord::Base
   end
 
   def self.find_map_by_slug(title)
-    urlalias = DrupalUrlAlias.find_by_dst('map/'+title,:order => "pid DESC")
-    urlalias.node if urlalias
+    name = title.split('/')[0].gsub('-', '')
+    date = Date.strptime(title.split('/')[1], '%m-%d-%Y')
+    date_range = (date.beginning_of_day.to_time.to_i..date.end_of_day.to_time.to_i)
+    DrupalNode.where(title: name, created: date_range).first
+    #urlalias = DrupalUrlAlias.find_by_dst('map/'+title,:order => "pid DESC")
+    #urlalias.node if urlalias
   end
 
   def map
-    DrupalContentTypeMap.find_by_nid(self.nid,:order => "vid DESC")
+    #self.drupal_content_type_map.order(vid: :desc).last
+    self.drupal_content_type_map.last
+    #DrupalContentTypeMap.find_by_nid(self.nid,:order => "vid DESC")
   end
 
   def nearby_maps(dist = 1.5)
