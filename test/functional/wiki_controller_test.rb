@@ -38,14 +38,15 @@ class WikiControllerTest < ActionController::TestCase
     # add a tag, and change the title and body
     newtitle = title + " which I amended"
     nid = DrupalNodeRevision.find_by_title(title).nid
+    # TODO: not updating or not retrieving correct node revision
     post :update, :id => nid, :title => newtitle, :body => "This is fascinating documentation about balloon mapping. <span id='teststring'>added content</span>", :tags => "balloon-mapping,event,meetup"
-    assert_redirected_to "/wiki/"+title.parameterize
+    assert_redirected_to "/wiki/"+newtitle.parameterize
 
-    get(:show, {:id => title.parameterize}) 
+    get(:show, {:id => newtitle.parameterize}) 
     assert_response :success
     assert_equal flash[:notice], "Edits saved."
     # This is WRONG! It should be newtitle, not title, right?:
-    assert_select "h2", title # title should change but not URL
+    assert_select "h2", newtitle # title should change but not URL
     # assert_select "span#teststring", "added content" # this test does not work! very frustrating. 
     # assert_select ".label", "meetup" # test for tag addition too, later
   end

@@ -71,25 +71,18 @@ class DrupalNode < ActiveRecord::Base
   def setup
     self['created'] = DateTime.now.to_i
     self.save
-    current_user = User.find_by_username(DrupalUsers.find_by_uid(self.uid).name)
-    if self.type == "note"
-      slug = DrupalUrlAlias.new({
-        :dst => self.generate_path,
-        :src => "node/"+self.id.to_s
-      }).save
-    else
-      slug = DrupalUrlAlias.new({
-        :dst => self.generate_path,
-        :src => "node/"+self.id.to_s
-      }).save
-    end
+    #DrupalUrlAlias.new({
+      #:dst => self.generate_path,
+      #:src => "node/"+self.id.to_s
+    #}).save
     DrupalNodeCounter.new({:nid => self.id}).save
     self.create_access
   end
 
   def delete_url_alias
-    url_alias = DrupalUrlAlias.find_by_src("node/"+self.nid.to_s)
-    url_alias.delete if url_alias
+    #url_alias = DrupalUrlAlias.find_by_src("node/"+self.nid.to_s)
+    #url_alias.delete if url_alias
+    0
   end
 
   public
@@ -135,10 +128,10 @@ class DrupalNode < ActiveRecord::Base
   end
 
   def generate_path
-    username = DrupalUsers.find_by_uid(self.uid).name
     if self.type == 'note'
+      username = DrupalUsers.find_by_uid(self.uid).name
       "notes/"+username+"/"+Time.now.strftime("%m-%d-%Y")+"/"+self.title.parameterize
-    elsif self.type == 'page'
+    elsif self.type == 'page' || self.type == 'tool' || self.type == 'place'
       "wiki/"+self.title.parameterize
     elsif self.type == 'map'
       "map/"+self.title.parameterize+"/"+Time.now.strftime("%m-%d-%Y")
@@ -342,30 +335,36 @@ class DrupalNode < ActiveRecord::Base
   # is this used anymore? deprecate?
   def slug
     if self.type == "page" || self.type == "tool" || self.type == "place"
-      slug = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC").dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
+      slug = self.generate_path
+      #slug = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC").dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
     else
-      slug = "#{self.type}/#{self.title.gsub(" ", "-")}/#{Time.at(created_at).to_date}"
+      slug = self.generate_path
+      #slug = "#{self.type}/#{self.title.gsub(" ", "-")}/#{Time.at(created_at).to_date}"
       #slug = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC").dst if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
     end
     slug
   end
 
   def path
-    url_alias = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC")
-    if url_alias
-      path = "/"+url_alias.dst
-      path.gsub!('/place','/wiki') if self.type == "place"
-      path.gsub!('/tool','/wiki') if self.type == "tool"
+    #url_alias = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC")
+    #if url_alias
+      path = "/#{self.generate_path}"
+      #path = "/"+url_alias.dst
+      #path.gsub!('/place','/wiki') if self.type == "place"
+      #path.gsub!('/tool','/wiki') if self.type == "tool"
       path
-    end
+    #end
   end
 
   def edit_path
+    # this only exists in wiki/show.html.erb
     if self.type == "page" || self.type == "tool" || self.type == "place"
       if self.language != ""
-        path = "/wiki/edit/"+self.language+'/'+DrupalUrlAlias.find_by_src('node/'+self.id.to_s).dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
+        #path = "/wiki/edit/"+self.language+'/'+DrupalUrlAlias.find_by_src('node/'+self.id.to_s).dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
+        path = "/wiki/edit/"+self.language+'/'+ self.generate_path
       else
-        path = "/wiki/edit/"+DrupalUrlAlias.find_by_src('node/'+self.id.to_s).dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
+        #path = "/wiki/edit/"+DrupalUrlAlias.find_by_src('node/'+self.id.to_s).dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
+        path = "/wiki/edit/"+ self.generate_path
       end
     else
       path = "/notes/edit/"+self.id.to_s
@@ -374,20 +373,24 @@ class DrupalNode < ActiveRecord::Base
   end
 
   def self.find_by_slug(title)
-    urlalias = DrupalUrlAlias.find_by_dst('place/'+title)
-    urlalias = urlalias || DrupalUrlAlias.find_by_dst('tool/'+title)
-    urlalias = urlalias || DrupalUrlAlias.find_by_dst('wiki/'+title)
-    urlalias = urlalias || DrupalUrlAlias.find_by_dst(title)
-    if urlalias
-      urlalias.node
-    else
-      nil
-    end
+    DrupalNode.where(title: title).first
+    #urlalias = DrupalUrlAlias.find_by_dst('place/'+title)
+    #urlalias = urlalias || DrupalUrlAlias.find_by_dst('tool/'+title)
+    #urlalias = urlalias || DrupalUrlAlias.find_by_dst('wiki/'+title)
+    #urlalias = urlalias || DrupalUrlAlias.find_by_dst(title)
+    #if urlalias
+      #urlalias.node
+    #else
+      #nil
+    #end
   end
 
+
   def self.find_root_by_slug(title)
-    slug = DrupalUrlAlias.find_by_dst(title)
-    slug.node if slug
+    DrupalNode.where(title: title.capitalize, type: "page").first
+    #slug = DrupalUrlAlias.find_by_dst(title)
+    #slug.node if slug
+
   end
 
   def self.find_map_by_slug(title)
