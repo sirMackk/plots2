@@ -40,9 +40,9 @@ class WikiControllerTest < ActionController::TestCase
     nid = DrupalNodeRevision.find_by_title(title).nid
     # TODO: not updating or not retrieving correct node revision
     post :update, :id => nid, :title => newtitle, :body => "This is fascinating documentation about balloon mapping. <span id='teststring'>added content</span>", :tags => "balloon-mapping,event,meetup"
-    assert_redirected_to "/wiki/"+newtitle.parameterize
+    assert_redirected_to "/wiki/"+title.parameterize
 
-    get(:show, {:id => newtitle.parameterize}) 
+    get(:show, {:id => title.parameterize}) 
     assert_response :success
     assert_equal flash[:notice], "Edits saved."
     # This is WRONG! It should be newtitle, not title, right?:
