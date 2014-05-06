@@ -109,7 +109,7 @@ class WikiController < ApplicationController
           i.save
         end
         # can't do this because it changes the URL:
-        #@node.title = @revision.title
+        @node.title = @revision.title
         # save main image
         if params[:main_image] && params[:main_image] != ""
           begin

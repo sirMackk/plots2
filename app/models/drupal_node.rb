@@ -6,9 +6,9 @@ class UniqueUrlValidator < ActiveModel::Validator
     elsif record.title == "new" && (record.type == "page" || record.type == "place" || record.type == "tool")
       record.errors[:base] << "You may not use the title 'new'." # otherwise the below title uniqueness check fails, as title presence validation doesn't run until after
     else
-      if !DrupalUrlAlias.find_by_dst(record.generate_path).nil? && record.type == "note"
-      record.errors[:base] << "You have already used this title today."
-      end
+      #if !DrupalUrlAlias.find_by_dst(record.generate_path).nil? && record.type == "note"
+      #record.errors[:base] << "You have already used this title today."
+      #end
     end
   end
 end
@@ -41,6 +41,7 @@ class DrupalNode < ActiveRecord::Base
   has_many :node_selections, :foreign_key => :nid
 
   validates :title, :presence => :true
+  validates_uniqueness_of :node_slug, message: "This title is already taken!"
   validates_with UniqueUrlValidator, :on => :create
 
   # making drupal and rails database conventions play nice
@@ -60,12 +61,18 @@ class DrupalNode < ActiveRecord::Base
   before_save :set_changed_and_created
   after_create :setup
   before_destroy :delete_url_alias
+  before_validation :set_slug
 
   private
 
   def set_changed_and_created
     self['changed'] = DateTime.now.to_i
   end
+
+  def set_slug
+    self.node_slug = self.title.parameterize
+  end
+
 
   # determines URL ("slug"), initializes the view counter, and sets up a created timestamp
   def setup
@@ -132,7 +139,8 @@ class DrupalNode < ActiveRecord::Base
       username = DrupalUsers.find_by_uid(self.uid).name
       "notes/"+username+"/"+Time.now.strftime("%m-%d-%Y")+"/"+self.title.parameterize
     elsif self.type == 'page' || self.type == 'tool' || self.type == 'place'
-      "wiki/"+self.title.parameterize
+      #"wiki/"+self.title.parameterize
+      "wiki/" + self.node_slug
     elsif self.type == 'map'
       "map/"+self.title.parameterize+"/"+Time.now.strftime("%m-%d-%Y")
     end
@@ -342,6 +350,7 @@ class DrupalNode < ActiveRecord::Base
       #slug = "#{self.type}/#{self.title.gsub(" ", "-")}/#{Time.at(created_at).to_date}"
       #slug = DrupalUrlAlias.find_by_src('node/'+self.id.to_s, :order => "pid DESC").dst if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
     end
+    #self.node_slug
     slug
   end
 
@@ -362,9 +371,11 @@ class DrupalNode < ActiveRecord::Base
       if self.language != ""
         #path = "/wiki/edit/"+self.language+'/'+DrupalUrlAlias.find_by_src('node/'+self.id.to_s).dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
         path = "/wiki/edit/"+self.language+'/'+ self.generate_path
+        path = "/wiki/edit/"+self.language+'/'+ self.slug
       else
         #path = "/wiki/edit/"+DrupalUrlAlias.find_by_src('node/'+self.id.to_s).dst.split('/').last if DrupalUrlAlias.find_by_src('node/'+self.id.to_s)
         path = "/wiki/edit/"+ self.generate_path
+        path = "/wiki/edit/" + self.slug
       end
     else
       path = "/notes/edit/"+self.id.to_s
@@ -373,7 +384,8 @@ class DrupalNode < ActiveRecord::Base
   end
 
   def self.find_by_slug(title)
-    DrupalNode.where(title: title).first
+    #DrupalNode.where(title: title.split("/").last.gsub('-', ' ').downcase).first
+    DrupalNode.where(node_slug: title).first
     #urlalias = DrupalUrlAlias.find_by_dst('place/'+title)
     #urlalias = urlalias || DrupalUrlAlias.find_by_dst('tool/'+title)
     #urlalias = urlalias || DrupalUrlAlias.find_by_dst('wiki/'+title)
@@ -387,7 +399,8 @@ class DrupalNode < ActiveRecord::Base
 
 
   def self.find_root_by_slug(title)
-    DrupalNode.where(title: title.capitalize, type: "page").first
+    #DrupalNode.where(title: title.capitalize, type: "page").first
+    DrupalNode.where(node_slug: title).first
     #slug = DrupalUrlAlias.find_by_dst(title)
     #slug.node if slug
 
