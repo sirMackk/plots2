@@ -227,7 +227,7 @@ class DrupalNode < ActiveRecord::Base
   end
 
   def responded_to
-    DrupalNode.find self.power_tags("response")
+    DrupalNode.find_all_by_nid(self.power_tags("response")) || []
   end
 
   def responses
@@ -361,17 +361,6 @@ class DrupalNode < ActiveRecord::Base
     # This fires off a query that orders by vid DESC
     # and is quicker than doing .order(vid: :DESC) for some reason.
     self.drupal_content_type_map.last
-  end
-
-  def nearby_maps(dist = 1.5)
-    minlat = self.lat - dist
-    maxlat = self.lat + dist
-    minlon = self.lon - dist
-    maxlon = self.lon + dist
-    # GeoRuby 
-    # field_bbox_geo is the geom column
-    #DrupalContentFieldBbox.find_by_geom([[minlon,minlat],[maxlon,maxlat]]).collect(&:drupal_node)
-    []
   end
 
   def locations

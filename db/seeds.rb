@@ -6,6 +6,8 @@
 #   cities = City.create([{ name: 'Chicago' }, { name: 'Copenhagen' }])
 #   Mayor.create(name: 'Emanuel', city: cities.first)
 
+# set up a tag for all_notes subscription
+everything_tag = DrupalTag.create! "name"=>"everything", "description"=>"", "weight"=>0
 
 # set up 3 basic users: admin, mod, and user
 admin = User.create! "username"=>"admin", "email"=>"admin@example.com",
@@ -43,9 +45,6 @@ DrupalUsers.create! "name"=>"user",
 %w{about media events getting-started donate stats licenses}.each do |page|
   web_page = DrupalNode.create! "type"=>"page", "title"=>page.capitalize, "uid"=>admin.id,
     "status"=>1, "comment"=>0, "cached_likes"=>0
-  #web_node_counter = DrupalNodeCounter.create! "nid"=>web_page.nid,
-    #"totalcount"=>1
-    
   web_node_revisions = DrupalNodeRevision.create! "nid"=>web_page.nid,
     "uid"=>admin.uid, "title"=>page.capitalize, "body"=>"#{page} - page", "teaser"=>"",
     "log"=>"", "format"=>1

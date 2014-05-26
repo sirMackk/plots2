@@ -15,7 +15,11 @@
     <%= render :partial => "like/like" %>
   </div>
 
-  <h2><%= @revision.title %> <a href="javascript:$('#wiki-toolbar').toggle()" class="btn btn-link"><b class="caret"></b></a></h2>
+  <h2><%= @revision.title %> <a onClick="$('#wiki-toolbar').toggle()" class="btn btn-link"><b class="caret"></b></a></h2>
+
+<% if @is_revision %>
+  <div class="alert">This is a revision from <%= @revision.created_at.to_s(:long) %>. <a href="/wiki/revisions/<%= @node.slug %>">View all revisions</a></div>
+<% end %>
 
   <div <% if @presentation %>style="display:none" <% end %>id="wiki-toolbar">
     <div class="hidden-print">
@@ -39,6 +43,12 @@
     </div>
   </div>
 
+  <% if @node.has_power_tag('parent') %>
+    <% slug = @node.power_tag('parent') %>
+    <% parent = DrupalNode.find_by_slug(slug) %>
+    <div class="alert" style="border-color:#eee;background:#f8f8f8;color:#aaa;">&laquo; Back to <a href="/wiki/<%= slug %>"><%= parent.latest.title %></a></div>
+  <% end %>
+
   <% if @node.has_power_tag('tabbed') %>
   <div class="navbar">
     <div class="navbar-inner">
@@ -54,7 +64,7 @@
   <div class="tab-content">
     <% if @node.has_power_tag('tabbed') %>
       <% if @node.power_tags('tabbed').include?("notes") %>
-        <div class="tab-pane" id="tab-notes" style="padding-left:12px;">
+        <div class="tab-pane" id="tab-notes">
           <%= render :partial => "notes/notes" %>
           <p><a href="/tag/<%= @node.slug %>">More research on "<%= @node.slug %>" &raquo;</a></p>
           <br />
